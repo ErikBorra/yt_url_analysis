@@ -22,7 +22,7 @@ if (!is_resource($thislockfp)) {
 
 global $dbuser, $dbpass, $database, $hostname;
 
-$threads = 8;                   // Number of processes to fork (= number of files to process in parallel)
+$threads = 16;                    // Number of processes to fork (= number of files to process in parallel)
 $timeout = 5;                    // Curl request timeout
 $child_sleep_normal = 500;       // Child sleeps n milliseconds after any Curl request
 $child_sleep_faster = 200;       // Child sleeps n milliseconds after any Curl request for major websites
@@ -89,6 +89,7 @@ for ($t = 0; $t < $threads; $t++) {
         $file_name = $files[$t];
         $file = file($file_name);
         logit("urlexpand.log","thread $t\tDoing $file_name");
+        exec("mv $file_name $cache_dir/resolved/"); # @todo, bit early here, but trying to avoid stuff being redone when fork crashes or so
         foreach($file as $k => $line) {
 
             // split file in elements
@@ -151,9 +152,9 @@ for ($t = 0; $t < $threads; $t++) {
                 $rec2->bindParam(":status_code", $error_code, PDO::PARAM_INT);
                 #print $sql2."\n";
                 
-                if(!preg_match("/^[\d\s,]+$/",$ids))
-                    print "ERROR for $sql2\n";
-                else
+                if(!preg_match("/^[\d\s,]+$/",$ids)) {
+                    logit("urlexpand.log","ERROR SQL\tthread $t\t$file_name\t$k\t$url\t$sql2 ");
+                } else
                     $rec2->execute();
                     
                 logit("urlexpand.log","OK\tthread $t\t$file_name\t$k\t$url\t$error_code\t$resolvedUrl");
@@ -166,10 +167,10 @@ for ($t = 0; $t < $threads; $t++) {
                 usleep($child_sleep_normal);
             }
         }
+        #if($bad + $success == count($file)) // only move when all urls have been processed
+        #exec("mv $file_name $cache_dir/resolved/");
         $str = "thread $t\t$file_name\thandled with " . ($bad + $success) . " updates; $bad bad links and $success successful resolves.";
         logit("urlexpand.log", $str);
-        #if($bad + $success == count($file)) // only move when all urls have been processed
-            exec("mv $file_name $cache_dir/resolved/");
         exit(0);
     }
 }
