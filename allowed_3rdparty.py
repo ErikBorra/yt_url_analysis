@@ -96,4 +96,6 @@ commission_extra = [
 'paypal.com',
 'paypal.me',
 'skillshare.com',
+'squarespace.com',
+'dbrand.com'
 ]
